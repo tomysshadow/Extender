@@ -138,10 +138,10 @@
     <ClInclude Include="TextSection.h" />
   </ItemGroup>
   <ItemGroup>
-    <Text Include="README.txt" />
+    <None Include="Extender.def" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="Extender.def" />
+    <Text Include="..\README.txt" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
