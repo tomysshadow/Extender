@@ -109,7 +109,7 @@ extern "C" BOOL APIENTRY DllMain(HMODULE hModule, DWORD fdwReason, LPVOID lpRese
 		{
 			HANDLE currentProcess = GetCurrentProcess();
 			if (!setupExtender(currentProcess)) {
-				TerminateProcess(currentProcess, 0);
+				TerminateProcess(currentProcess, -1);
 				return FALSE;
 			}
 		}
