@@ -70,7 +70,7 @@ bool setupExtender(HANDLE currentProcess) {
 	}
 
 	// test it
-	if (!textSection->test(tested, TESTED_ADDRESS)) {
+	if (!textSection->test(tested, SIZEOF_TESTED, TESTED_ADDRESS)) {
 		MessageBox(NULL, "Text Section Test failed", messageBoxLpCaption, MB_OK);
 		CloseHandle(moduleHandle);
 		delete textSection;

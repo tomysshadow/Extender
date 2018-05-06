@@ -16,7 +16,7 @@ class TextSection {
 	bool unprotect();
 	bool protect();
 	bool flush();
-	bool test(void* tested, DWORD testedAddress);
+	bool test(void* tested, size_t sizeofTested, DWORD testedAddress);
 	bool write(DWORD writtenAddress);
 	bool write(void* written, DWORD writtenAddress, bool call = false);
 	TextSection(LPVOID lpAddress, SIZE_T dwSize, HANDLE currentProcess);

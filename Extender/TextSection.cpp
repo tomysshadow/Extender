@@ -26,12 +26,10 @@ bool TextSection::flush() {
 	return flushed;
 }
 
-bool TextSection::test(void* tested, DWORD testedAddress) {
-	const size_t SIZEOF_TEST = sizeof(tested);
-
+bool TextSection::test(void* tested, size_t sizeofTested, DWORD testedAddress) {
 	// set Test Position absolutely
 	testedAddress = (DWORD)lpAddress + testedAddress;
-	if (testedAddress + SIZEOF_TEST > (DWORD)lpAddress + dwSize) {
+	if (testedAddress + sizeofTested > (DWORD)lpAddress + dwSize) {
 		return false;
 	}
 
@@ -43,7 +41,7 @@ bool TextSection::test(void* tested, DWORD testedAddress) {
 		|| memoryBasicInformation.Protect & PAGE_EXECUTE) {
 		return false;
 	}
-	return !memcmp((const void*)testedAddress, tested, SIZEOF_TEST); // false means they are the same
+	return !memcmp((const void*)testedAddress, tested, sizeofTested); // false means they are the same
 }
 
 bool TextSection::write(DWORD writtenAddress) {

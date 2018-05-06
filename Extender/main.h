@@ -11,7 +11,8 @@ const DWORD WRITTEN_CODE_RETURN_ADDRESS = 0x00001000; // set this to the return 
 													  // because whereas the written code may only be written to the module's .text section,
 													  // the written code itself may need access to other sections
 HANDLE moduleHandle = INVALID_HANDLE_VALUE;           // leave alone, we will get the Module Handle when setting up the Extender
-unsigned char tested[] = {0x00, 0x00, 0x00, 0x00};    // set this to the buffer to be tested within the .text section
+const size_t SIZEOF_TESTED = 4;
+unsigned char tested[SIZEOF_TESTED] = {0x00, 0x00, 0x00, 0x00};    // set this to the buffer to be tested within the .text section
 // set this to the code to be written within the .text section
 __declspec(naked) void written() {
 	__asm {
