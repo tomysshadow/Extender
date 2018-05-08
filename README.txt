@@ -1,4 +1,4 @@
-Extender 1.1.0
+Extender 1.1.2
 By Anthony Kleine
 
 This is a library to extend the .text section of any module. It is loosely based on PlatinumTeam's MB Extender, but is much more lightweight.
