@@ -44,6 +44,7 @@ bool setupExtender(HANDLE currentProcess) {
 
 	// get Module Handle
 	moduleHandle = GetModuleHandle(LP_MODULE_NAME);
+	moduleHandleWrittenCodeReturnAddress = (HANDLE)((DWORD)moduleHandle + (DWORD)WRITTEN_CODE_RETURN_ADDRESS);
 	LPVOID textSectionLpAddress = NULL;
 	SIZE_T textSectionDwSize = 0;
 
