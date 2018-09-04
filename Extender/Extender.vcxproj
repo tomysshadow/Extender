@@ -131,11 +131,9 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />
-    <ClCompile Include="TextSection.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="main.h" />
-    <ClInclude Include="TextSection.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Extender.def" />

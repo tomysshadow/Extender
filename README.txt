@@ -1,6 +1,6 @@
-Extender 1.2.0
+Extender 1.3.0
 By Anthony Kleine
 
-This is a library to extend the .text section of any module. It is loosely based on PlatinumTeam's MB Extender, but is much more lightweight.
+This is a template to extend the code of any module. It is loosely based on PlatinumTeam's MB Extender, but is much more lightweight.
 
-All the values which need to be set may be found in main.h. This library will not help you write the extended code - that part you will need to do yourself.
+All the values which need to be set may be found in the extender function in main.cpp. All addresses passed to the test/extend functions must be Relative Virtual Addresses. This template will not help you write the extended code - that part you will need to do yourself.

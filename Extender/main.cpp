@@ -1,125 +1,44 @@
 #include <windows.h>
-#include <Dbghelp.h>
 #include "main.h"
-#include "TextSection.h"
 
-bool getTextSectionAddressAndSize(LPVOID &textSectionLpAddress, SIZE_T &textSectionDwSize, const char* messageBoxLpCaption) {
-	if (moduleHandle == INVALID_HANDLE_VALUE) {
-		MessageBox(NULL, "Failed to get Module Handle", messageBoxLpCaption, MB_OK);
-		return false;
+DWORD extendedCode_returnAddress = 0x00000000;
+__declspec(naked) void extendedCode() {
+	__asm {
+		// set this to your Extension Code
+		
+		// epilogue
+		jmp [extendedCode_returnAddress]
 	}
-	PIMAGE_NT_HEADERS imageNtHeader = ImageNtHeader(moduleHandle);
-	if (!imageNtHeader) {
-		MessageBox(NULL, "Failed to get Image NT Header", messageBoxLpCaption, MB_OK);
-		imageNtHeader = 0;
-		return false;
-	}
-	PIMAGE_SECTION_HEADER imageSectionHeader = (PIMAGE_SECTION_HEADER)(imageNtHeader + 1);
-	const char IMAGE_SECTION_HEADER_NAME_TEXT[IMAGE_SIZEOF_SHORT_NAME] = ".text\0\0";
-	for (WORD i = 0;i<imageNtHeader->FileHeader.NumberOfSections;i++) {
-		if (moduleHandle == INVALID_HANDLE_VALUE) {
-			MessageBox(NULL, "Failed to get Module Handle", messageBoxLpCaption, MB_OK);
-			imageNtHeader = 0;
-			imageSectionHeader = 0;
-			return false;
-		}
-		// false means they are the same
-		if (!memcmp((const void*)imageSectionHeader->Name, IMAGE_SECTION_HEADER_NAME_TEXT, IMAGE_SIZEOF_SHORT_NAME)) {
-			textSectionLpAddress = (BYTE*)moduleHandle + imageSectionHeader->VirtualAddress;
-			textSectionDwSize = imageSectionHeader->Misc.VirtualSize;
-			imageNtHeader = 0;
-			imageSectionHeader = 0;
-			return true;
-		}
-		imageSectionHeader++;
-	}
-	MessageBox(NULL, "Failed to get Text Section", messageBoxLpCaption, MB_OK);
-	imageNtHeader = 0;
-	imageSectionHeader = 0;
-	return false;
 }
 
-bool setupExtender(HANDLE currentProcess) {
-	const char* messageBoxLpCaption = "Extender Error";
+bool extender() {
+	// set this to your Error Caption
+	LPCTSTR errorLpCaption = "Extender Error";
 
 	// get Module Handle
-	moduleHandle = GetModuleHandle(LP_MODULE_NAME);
-	moduleHandleWrittenCodeReturnAddress = (HANDLE)((DWORD)moduleHandle + (DWORD)WRITTEN_CODE_RETURN_ADDRESS);
-	LPVOID textSectionLpAddress = NULL;
-	SIZE_T textSectionDwSize = 0;
+	HANDLE moduleHandle = GetModuleHandle(NULL);
 
-	// get Text Section lpAddress and dwSize
-	if (!getTextSectionAddressAndSize(textSectionLpAddress, textSectionDwSize, messageBoxLpCaption)) {
-		MessageBox(NULL, "Failed to get Text Section Address and Size", messageBoxLpCaption, MB_OK);
-		CloseHandle(moduleHandle);
+	if (moduleHandle == NULL) {
+		MessageBox(NULL, "Failed to get Module Handle", errorLpCaption, MB_OK | MB_ICONERROR);
 		return false;
 	}
 
-	// create Text Section
-	TextSection* textSection = new TextSection(textSectionLpAddress, textSectionDwSize, currentProcess);
-	if (!textSection) {
-		MessageBox(NULL, "Failed to create Text Section", messageBoxLpCaption, MB_OK);
-		CloseHandle(moduleHandle);
-		return false;
-	}
-	if (!textSection->unprotect()) {
-		MessageBox(NULL, "Failed to unprotect Text Section", messageBoxLpCaption, MB_OK);
-		CloseHandle(moduleHandle);
-		delete textSection;
-		textSection = 0;
-		return false;
-	}
+	// add your Extension Code Addresses
+	// (any addresses you want to use within your Extension Code as a variable)
+	extendedCode_returnAddress = (DWORD)moduleHandle + 0x00001000;
 
 	// test it
-	if (!testedSet) {
-		if (!textSection->test(tested, SIZEOF_TESTED, TESTED_ADDRESS)) {
-			MessageBox(NULL, "Text Section Test failed", messageBoxLpCaption, MB_OK);
-			CloseHandle(moduleHandle);
-			delete textSection;
-			textSection = 0;
-			return false;
-		}
-		testedSet = true;
-	}
-
-	// write it
-	if (!textSection->write(written, WRITTEN_ADDRESS)) {
-		MessageBox(NULL, "Text Section Write failed", messageBoxLpCaption, MB_OK);
-		CloseHandle(moduleHandle);
-		delete textSection;
-		textSection = 0;
+	const size_t TEST_CODE_CODE_SIZE = 4;
+	unsigned char testCodeCode[TEST_CODE_CODE_SIZE] = {0x00, 0x00, 0x00, 0x00};
+	if (!testCode(errorLpCaption, moduleHandle, 0x00001000, TEST_CODE_CODE_SIZE, testCodeCode)) {
+		MessageBox(NULL, "Failed to Test Code", errorLpCaption, MB_OK | MB_ICONERROR);
 		return false;
 	}
 
-	// flush it
-	if (!textSection->flush()) {
-		MessageBox(NULL, "Text Section Flush failed", messageBoxLpCaption, MB_OK);
-		CloseHandle(moduleHandle);
-		delete textSection;
-		textSection = 0;
+	// extend it
+	if (!extendCode(errorLpCaption, moduleHandle, 0x00001000, extendedCode)) {
+		MessageBox(NULL, "Failed to Extend Code", errorLpCaption, MB_OK | MB_ICONERROR);
 		return false;
 	}
-
-	// cleanup
-	delete textSection;
-	textSection = 0;
 	return true;
-}
-
-extern "C" BOOL APIENTRY DllMain(HMODULE hModule, DWORD fdwReason, LPVOID lpReserved) {
-	switch (fdwReason) {
-		case DLL_PROCESS_ATTACH:
-		DisableThreadLibraryCalls(hModule);
-		{
-			HANDLE currentProcess = GetCurrentProcess();
-			if (!setupExtender(currentProcess)) {
-				TerminateProcess(currentProcess, -1);
-				return FALSE;
-			}
-		}
-		break;
-		case DLL_PROCESS_DETACH:
-		break;
-	}
-	return TRUE;
 }
