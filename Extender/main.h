@@ -23,7 +23,7 @@ extern "C" BOOL APIENTRY DllMain(HMODULE hModule, DWORD fdwReason, LPVOID lpRese
 	return TRUE;
 }
 
-bool unprotectCode(LPCTSTR errorLpCaption, HANDLE moduleHandle, DWORD virtualAddress, DWORD virtualSize, DWORD &lpflOldProtect) {
+bool getSectionAddressAndSize(LPCTSTR errorLpCaption, HANDLE moduleHandle, DWORD virtualAddress, DWORD virtualSize) {
 	if (moduleHandle == NULL) {
 		MessageBox(NULL, "Failed to Get Module Handle", errorLpCaption, MB_OK | MB_ICONERROR);
 		return false;
@@ -40,13 +40,9 @@ bool unprotectCode(LPCTSTR errorLpCaption, HANDLE moduleHandle, DWORD virtualAdd
 		return false;
 	}
 	for (WORD i = 0;i < imageNtHeader->FileHeader.NumberOfSections;i++) {
-		if (virtualAddress > (DWORD)moduleHandle + imageSectionHeader->VirtualAddress && virtualAddress + virtualSize < (DWORD)moduleHandle + imageSectionHeader->VirtualAddress + imageSectionHeader->Misc.VirtualSize) {
+		if (virtualAddress >(DWORD)moduleHandle + imageSectionHeader->VirtualAddress && virtualAddress + virtualSize < (DWORD)moduleHandle + imageSectionHeader->VirtualAddress + imageSectionHeader->Misc.VirtualSize) {
 			imageNtHeader = NULL;
 			imageSectionHeader = NULL;
-			if (!VirtualProtect((LPVOID)virtualAddress, virtualSize, PAGE_EXECUTE_READWRITE, &lpflOldProtect) || !virtualAddress || !virtualSize) {
-				MessageBox(NULL, "Failed to Unprotect Code", errorLpCaption, MB_OK | MB_ICONERROR);
-				return false;
-			}
 			return true;
 		}
 		imageSectionHeader++;
@@ -57,7 +53,32 @@ bool unprotectCode(LPCTSTR errorLpCaption, HANDLE moduleHandle, DWORD virtualAdd
 	return false;
 }
 
-bool protectCode(LPCTSTR errorLpCaption, DWORD virtualAddress, DWORD virtualSize, DWORD &lpflOldProtect) {
+bool unprotectCode(LPCTSTR errorLpCaption, HANDLE moduleHandle, DWORD virtualAddress, DWORD virtualSize, DWORD &lpflOldProtect) {
+	if (!getSectionAddressAndSize(errorLpCaption, moduleHandle, virtualAddress, virtualSize)) {
+		return false;
+	}
+
+	if (!VirtualProtect((LPVOID)virtualAddress, virtualSize, PAGE_EXECUTE_READWRITE, &lpflOldProtect) || !virtualAddress || !virtualSize) {
+		MessageBox(NULL, "Failed to Unprotect Code", errorLpCaption, MB_OK | MB_ICONERROR);
+		return false;
+	}
+
+	// get Basic Memory Information
+	MEMORY_BASIC_INFORMATION memoryBasicInformation;
+	if (VirtualQuery((LPCVOID)virtualAddress, &memoryBasicInformation, sizeof(memoryBasicInformation)) != sizeof(memoryBasicInformation)
+		|| !memoryBasicInformation.Protect
+		|| memoryBasicInformation.Protect & PAGE_NOACCESS
+		|| memoryBasicInformation.Protect & PAGE_EXECUTE) {
+		return false;
+	}
+	return true;
+}
+
+bool protectCode(LPCTSTR errorLpCaption, HANDLE moduleHandle, DWORD virtualAddress, DWORD virtualSize, DWORD &lpflOldProtect) {
+	if (!getSectionAddressAndSize(errorLpCaption, moduleHandle, virtualAddress, virtualSize)) {
+		return false;
+	}
+
 	if (!lpflOldProtect || !VirtualProtect((LPVOID)virtualAddress, virtualSize, lpflOldProtect, &lpflOldProtect)) {
 		MessageBox(NULL, "Failed to Protect Code", errorLpCaption, MB_OK | MB_ICONERROR);
 		return false;
@@ -65,7 +86,11 @@ bool protectCode(LPCTSTR errorLpCaption, DWORD virtualAddress, DWORD virtualSize
 	return true;
 }
 
-bool flushCode(LPCTSTR errorLpCaption, DWORD virtualAddress, DWORD virtualSize) {
+bool flushCode(LPCTSTR errorLpCaption, HANDLE moduleHandle, DWORD virtualAddress, DWORD virtualSize) {
+	if (!getSectionAddressAndSize(errorLpCaption, moduleHandle, virtualAddress, virtualSize)) {
+		return false;
+	}
+
 	if (!FlushInstructionCache(GetCurrentProcess(), (LPCVOID)virtualAddress, virtualSize)) {
 		MessageBox(NULL, "Failed to Flush Code", errorLpCaption, MB_OK | MB_ICONERROR);
 		return false;
@@ -84,18 +109,9 @@ bool testCode(LPCTSTR errorLpCaption, HANDLE moduleHandle, DWORD relativeVirtual
 		return false;
 	}
 
-	// get Basic Memory Information
-	MEMORY_BASIC_INFORMATION memoryBasicInformation;
-	if (VirtualQuery((LPCVOID)virtualAddress, &memoryBasicInformation, sizeof(memoryBasicInformation)) != sizeof(memoryBasicInformation)
-		|| !memoryBasicInformation.Protect
-		|| memoryBasicInformation.Protect & PAGE_NOACCESS
-		|| memoryBasicInformation.Protect & PAGE_EXECUTE) {
-		return false;
-	}
-
 	bool result = memoryEqual((const void*)virtualAddress, (const void*)code, virtualSize);
 
-	if (!protectCode(errorLpCaption, virtualAddress, virtualSize, lpflOldProtect)) {
+	if (!protectCode(errorLpCaption, moduleHandle, virtualAddress, virtualSize, lpflOldProtect)) {
 		return false;
 	}
 
@@ -122,11 +138,11 @@ bool extendCode(LPCTSTR errorLpCaption, HANDLE moduleHandle, DWORD relativeVirtu
 
 	*(DWORD*)((BYTE*)virtualAddress + 1) = (DWORD)code - virtualAddress - virtualSize;
 
-	if (!flushCode(errorLpCaption, virtualAddress, virtualSize)) {
+	if (!flushCode(errorLpCaption, moduleHandle, virtualAddress, virtualSize)) {
 		return false;
 	}
 
-	if (!protectCode(errorLpCaption, virtualAddress, virtualSize, lpflOldProtect)) {
+	if (!protectCode(errorLpCaption, moduleHandle, virtualAddress, virtualSize, lpflOldProtect)) {
 		return false;
 	}
 	return true;
@@ -146,11 +162,11 @@ bool extendCode(LPCTSTR errorLpCaption, HANDLE moduleHandle, DWORD relativeVirtu
 
 	*(BYTE*)virtualAddress = 0x90;
 
-	if (!flushCode(errorLpCaption, virtualAddress, virtualSize)) {
+	if (!flushCode(errorLpCaption, moduleHandle, virtualAddress, virtualSize)) {
 		return false;
 	}
 
-	if (!protectCode(errorLpCaption, virtualAddress, virtualSize, lpflOldProtect)) {
+	if (!protectCode(errorLpCaption, moduleHandle, virtualAddress, virtualSize, lpflOldProtect)) {
 		return false;
 	}
 	return true;

@@ -28,9 +28,9 @@ bool extender() {
 	extendedCode_returnAddress = (DWORD)moduleHandle + 0x00001000;
 
 	// test it
-	const size_t TEST_CODE_CODE_SIZE = 4;
-	unsigned char testCodeCode[TEST_CODE_CODE_SIZE] = {0x00, 0x00, 0x00, 0x00};
-	if (!testCode(errorLpCaption, moduleHandle, 0x00001000, TEST_CODE_CODE_SIZE, testCodeCode)) {
+	const size_t EXAMPLE_TEST_CODE_SIZE = 4;
+	unsigned char exampleTestCode[EXAMPLE_TEST_CODE_SIZE] = {0x00, 0x00, 0x00, 0x00};
+	if (!testCode(errorLpCaption, moduleHandle, 0x00001000, EXAMPLE_TEST_CODE_SIZE, exampleTestCode)) {
 		MessageBox(NULL, "Failed to Test Code", errorLpCaption, MB_OK | MB_ICONERROR);
 		return false;
 	}
