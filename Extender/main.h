@@ -114,7 +114,6 @@ bool testCode(LPCTSTR errorLpCaption, HANDLE moduleHandle, DWORD relativeVirtual
 	if (!protectCode(errorLpCaption, moduleHandle, virtualAddress, virtualSize, lpflOldProtect)) {
 		return false;
 	}
-
 	return result;
 }
 
