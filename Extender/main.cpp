@@ -18,7 +18,7 @@ bool extender() {
 	// get Module Handle
 	HANDLE moduleHandle = GetModuleHandle(NULL);
 
-	if (moduleHandle == NULL) {
+	if (!moduleHandle) {
 		MessageBox(NULL, "Failed to get Module Handle", errorLpCaption, MB_OK | MB_ICONERROR);
 		return false;
 	}

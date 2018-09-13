@@ -24,7 +24,7 @@ extern "C" BOOL APIENTRY DllMain(HMODULE hModule, DWORD fdwReason, LPVOID lpRese
 }
 
 bool getSectionAddressAndSize(LPCTSTR errorLpCaption, HANDLE moduleHandle, DWORD virtualAddress, DWORD virtualSize) {
-	if (moduleHandle == NULL) {
+	if (!moduleHandle) {
 		MessageBox(NULL, "Failed to Get Module Handle", errorLpCaption, MB_OK | MB_ICONERROR);
 		return false;
 	}
@@ -40,7 +40,7 @@ bool getSectionAddressAndSize(LPCTSTR errorLpCaption, HANDLE moduleHandle, DWORD
 		return false;
 	}
 	for (WORD i = 0;i < imageNtHeader->FileHeader.NumberOfSections;i++) {
-		if (virtualAddress >(DWORD)moduleHandle + imageSectionHeader->VirtualAddress && virtualAddress + virtualSize < (DWORD)moduleHandle + imageSectionHeader->VirtualAddress + imageSectionHeader->Misc.VirtualSize) {
+		if (virtualAddress >= (DWORD)moduleHandle + imageSectionHeader->VirtualAddress && virtualAddress + virtualSize <= (DWORD)moduleHandle + imageSectionHeader->VirtualAddress + imageSectionHeader->Misc.VirtualSize) {
 			imageNtHeader = NULL;
 			imageSectionHeader = NULL;
 			return true;
@@ -99,7 +99,7 @@ bool flushCode(LPCTSTR errorLpCaption, HANDLE moduleHandle, DWORD virtualAddress
 }
 
 bool testCode(LPCTSTR errorLpCaption, HANDLE moduleHandle, DWORD relativeVirtualAddress, DWORD virtualSize, unsigned char code[]) {
-	if (moduleHandle == NULL) {
+	if (!moduleHandle) {
 		return false;
 	}
 	DWORD virtualAddress = (DWORD)moduleHandle + relativeVirtualAddress;
@@ -118,7 +118,7 @@ bool testCode(LPCTSTR errorLpCaption, HANDLE moduleHandle, DWORD relativeVirtual
 }
 
 bool extendCode(LPCTSTR errorLpCaption, HANDLE moduleHandle, DWORD relativeVirtualAddress, void* code, bool call = false) {
-	if (moduleHandle == NULL) {
+	if (!moduleHandle) {
 		return false;
 	}
 	DWORD virtualAddress = (DWORD)moduleHandle + relativeVirtualAddress;
@@ -148,7 +148,7 @@ bool extendCode(LPCTSTR errorLpCaption, HANDLE moduleHandle, DWORD relativeVirtu
 }
 
 bool extendCode(LPCTSTR errorLpCaption, HANDLE moduleHandle, DWORD relativeVirtualAddress) {
-	if (moduleHandle == NULL) {
+	if (!moduleHandle) {
 		return false;
 	}
 	DWORD virtualAddress = (DWORD)moduleHandle + relativeVirtualAddress;
