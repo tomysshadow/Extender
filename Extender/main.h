@@ -23,6 +23,10 @@ extern "C" BOOL APIENTRY DllMain(HMODULE hModule, DWORD fdwReason, LPVOID lpRese
 	return TRUE;
 }
 
+inline DWORD createExtendedCodeAddress(HANDLE moduleHandle, DWORD address) {
+	return (DWORD)moduleHandle + address;
+}
+
 bool getSectionAddressAndSize(LPCTSTR errorLpCaption, HANDLE moduleHandle, DWORD virtualAddress, DWORD virtualSize) {
 	if (!moduleHandle) {
 		MessageBox(NULL, "Failed to Get Module Handle", errorLpCaption, MB_OK | MB_ICONERROR);

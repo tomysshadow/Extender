@@ -25,7 +25,7 @@ bool extender() {
 
 	// add your Extension Code Addresses
 	// (any addresses you want to use within your Extension Code as a variable)
-	extendedCode_returnAddress = (DWORD)moduleHandle + 0x00001000;
+	extendedCode_returnAddress = createExtendedCodeAddress(moduleHandle, 0x00001000);
 
 	// test it
 	const size_t EXAMPLE_TEST_CODE_SIZE = 4;
