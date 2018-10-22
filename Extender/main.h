@@ -134,12 +134,12 @@ bool extendCode(LPCTSTR errorLpCaption, HANDLE moduleHandle, DWORD relativeVirtu
 	}
 
 	if (!call) {
-		*(BYTE*)virtualAddress = 0xE9;
+		*(PBYTE)virtualAddress = 0xE9;
 	} else {
-		*(BYTE*)virtualAddress = 0x58;
+		*(PBYTE)virtualAddress = 0x58;
 	}
 
-	*(DWORD*)((BYTE*)virtualAddress + 1) = (DWORD)code - virtualAddress - virtualSize;
+	*(PDWORD)((PBYTE)virtualAddress + 1) = (DWORD)code - virtualAddress - virtualSize;
 
 	if (!flushCode(errorLpCaption, moduleHandle, virtualAddress, virtualSize)) {
 		return false;
@@ -163,7 +163,7 @@ bool extendCode(LPCTSTR errorLpCaption, HANDLE moduleHandle, DWORD relativeVirtu
 		return false;
 	}
 
-	*(BYTE*)virtualAddress = 0x90;
+	*(PBYTE)virtualAddress = 0x90;
 
 	if (!flushCode(errorLpCaption, moduleHandle, virtualAddress, virtualSize)) {
 		return false;
