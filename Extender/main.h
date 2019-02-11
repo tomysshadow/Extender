@@ -23,17 +23,16 @@ bool shiftMemory(size_t bufferSize, const void* buffer, size_t sourceSize, const
 
 	size_t destinationSize = (char*)buffer + bufferSize - source;
 	char* destination = (char*)source;
+
 	if (!direction) {
 		destination -= shift;
-	}
-	else {
+	} else {
 		destination += shift;
 	}
 
 	if (destination < buffer || destination + sourceSize >(char*)buffer + bufferSize) {
 		return false;
 	}
-
 	return !memmove_s(destination, destinationSize, source, sourceSize);
 }
 
@@ -42,6 +41,7 @@ bool extender();
 extern "C" BOOL APIENTRY DllMain(HMODULE hModule, DWORD fdwReason, LPVOID lpReserved) {
 	if (fdwReason == DLL_PROCESS_ATTACH) {
 		DisableThreadLibraryCalls(hModule);
+
 		{
 			if (!extender()) {
 				TerminateProcess(GetCurrentProcess(), -1);
@@ -52,41 +52,48 @@ extern "C" BOOL APIENTRY DllMain(HMODULE hModule, DWORD fdwReason, LPVOID lpRese
 	return TRUE;
 }
 
-inline DWORD createExtendedCodeAddress(HANDLE moduleHandle, DWORD address) {
+inline DWORD createExtendedCodeAddress(HMODULE moduleHandle, DWORD address) {
 	return (DWORD)moduleHandle + address;
 }
 
-bool getSectionAddressAndSize(LPCTSTR errorLpCaption, HANDLE moduleHandle, DWORD virtualAddress, DWORD virtualSize) {
+bool getSectionAddressAndSize(LPCTSTR errorLpCaption, HMODULE moduleHandle, DWORD virtualAddress, DWORD virtualSize) {
 	if (!moduleHandle) {
 		MessageBox(NULL, "Failed to Get Module Handle", errorLpCaption, MB_OK | MB_ICONERROR);
 		return false;
 	}
+
 	PIMAGE_NT_HEADERS imageNtHeader = ImageNtHeader(moduleHandle);
+
 	if (!imageNtHeader) {
 		MessageBox(NULL, "Failed to Get Image NT Header", errorLpCaption, MB_OK | MB_ICONERROR);
 		return false;
 	}
+
 	PIMAGE_SECTION_HEADER imageSectionHeader = (PIMAGE_SECTION_HEADER)(imageNtHeader + 1);
+
 	if (!imageSectionHeader) {
 		imageNtHeader = NULL;
 		MessageBox(NULL, "Failed to Get Image Section Header", errorLpCaption, MB_OK | MB_ICONERROR);
 		return false;
 	}
+
 	for (WORD i = 0;i < imageNtHeader->FileHeader.NumberOfSections;i++) {
 		if (virtualAddress >= (DWORD)moduleHandle + imageSectionHeader->VirtualAddress && virtualAddress + virtualSize <= (DWORD)moduleHandle + imageSectionHeader->VirtualAddress + imageSectionHeader->Misc.VirtualSize) {
 			imageNtHeader = NULL;
 			imageSectionHeader = NULL;
 			return true;
 		}
+
 		imageSectionHeader++;
 	}
+
 	imageNtHeader = NULL;
 	imageSectionHeader = NULL;
 	MessageBox(NULL, "Failed to Get Section Address And Size", errorLpCaption, MB_OK | MB_ICONERROR);
 	return false;
 }
 
-bool unprotectCode(LPCTSTR errorLpCaption, HANDLE moduleHandle, DWORD virtualAddress, DWORD virtualSize, DWORD &lpflOldProtect) {
+bool unprotectCode(LPCTSTR errorLpCaption, HMODULE moduleHandle, DWORD virtualAddress, DWORD virtualSize, DWORD &lpflOldProtect) {
 	if (!getSectionAddressAndSize(errorLpCaption, moduleHandle, virtualAddress, virtualSize)) {
 		return false;
 	}
@@ -107,7 +114,7 @@ bool unprotectCode(LPCTSTR errorLpCaption, HANDLE moduleHandle, DWORD virtualAdd
 	return true;
 }
 
-bool protectCode(LPCTSTR errorLpCaption, HANDLE moduleHandle, DWORD virtualAddress, DWORD virtualSize, DWORD &lpflOldProtect) {
+bool protectCode(LPCTSTR errorLpCaption, HMODULE moduleHandle, DWORD virtualAddress, DWORD virtualSize, DWORD &lpflOldProtect) {
 	if (!getSectionAddressAndSize(errorLpCaption, moduleHandle, virtualAddress, virtualSize)) {
 		return false;
 	}
@@ -119,7 +126,7 @@ bool protectCode(LPCTSTR errorLpCaption, HANDLE moduleHandle, DWORD virtualAddre
 	return true;
 }
 
-bool flushCode(LPCTSTR errorLpCaption, HANDLE moduleHandle, DWORD virtualAddress, DWORD virtualSize) {
+bool flushCode(LPCTSTR errorLpCaption, HMODULE moduleHandle, DWORD virtualAddress, DWORD virtualSize) {
 	if (!getSectionAddressAndSize(errorLpCaption, moduleHandle, virtualAddress, virtualSize)) {
 		return false;
 	}
@@ -131,10 +138,11 @@ bool flushCode(LPCTSTR errorLpCaption, HANDLE moduleHandle, DWORD virtualAddress
 	return true;
 }
 
-bool testCode(LPCTSTR errorLpCaption, HANDLE moduleHandle, DWORD relativeVirtualAddress, DWORD virtualSize, unsigned char code[]) {
+bool testCode(LPCTSTR errorLpCaption, HMODULE moduleHandle, DWORD relativeVirtualAddress, DWORD virtualSize, unsigned char code[]) {
 	if (!moduleHandle) {
 		return false;
 	}
+
 	DWORD virtualAddress = (DWORD)moduleHandle + relativeVirtualAddress;
 	DWORD lpflOldProtect = 0;
 
@@ -150,10 +158,11 @@ bool testCode(LPCTSTR errorLpCaption, HANDLE moduleHandle, DWORD relativeVirtual
 	return result;
 }
 
-bool extendCode(LPCTSTR errorLpCaption, HANDLE moduleHandle, DWORD relativeVirtualAddress, void* code, bool call = false) {
+bool extendCode(LPCTSTR errorLpCaption, HMODULE moduleHandle, DWORD relativeVirtualAddress, void* code, bool call = false) {
 	if (!moduleHandle) {
 		return false;
 	}
+
 	DWORD virtualAddress = (DWORD)moduleHandle + relativeVirtualAddress;
 	DWORD virtualSize = 5;
 	DWORD lpflOldProtect = 0;
@@ -180,10 +189,11 @@ bool extendCode(LPCTSTR errorLpCaption, HANDLE moduleHandle, DWORD relativeVirtu
 	return true;
 }
 
-bool extendCode(LPCTSTR errorLpCaption, HANDLE moduleHandle, DWORD relativeVirtualAddress) {
+bool extendCode(LPCTSTR errorLpCaption, HMODULE moduleHandle, DWORD relativeVirtualAddress) {
 	if (!moduleHandle) {
 		return false;
 	}
+
 	DWORD virtualAddress = (DWORD)moduleHandle + relativeVirtualAddress;
 	DWORD virtualSize = 1;
 	DWORD lpflOldProtect = 0;

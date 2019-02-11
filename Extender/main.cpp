@@ -16,7 +16,7 @@ bool extender() {
 	LPCTSTR errorLpCaption = "Extender Error";
 
 	// get Module Handle
-	HANDLE moduleHandle = GetModuleHandle(NULL);
+	HMODULE moduleHandle = GetModuleHandle(NULL);
 
 	if (!moduleHandle) {
 		MessageBox(NULL, "Failed to get Module Handle", errorLpCaption, MB_OK | MB_ICONERROR);
