@@ -4,6 +4,11 @@
 #include <windows.h>
 #include <Dbghelp.h>
 
+typedef DWORD VIRTUAL_ADDRESS;
+typedef DWORD VIRTUAL_SIZE;
+typedef DWORD RELATIVE_VIRTUAL_ADDRESS;
+typedef DWORD EXTENDED_CODE_ADDRESS;
+
 inline size_t stringSize(const char* string) {
 	return strlen(string) + 1;
 }
@@ -38,9 +43,9 @@ bool shiftMemory(size_t bufferSize, const void* buffer, size_t sourceSize, const
 
 bool extender();
 
-extern "C" BOOL APIENTRY DllMain(HMODULE hModule, DWORD fdwReason, LPVOID lpReserved) {
+extern "C" BOOL APIENTRY DllMain(HMODULE moduleHandle, DWORD fdwReason, LPVOID lpReserved) {
 	if (fdwReason == DLL_PROCESS_ATTACH) {
-		DisableThreadLibraryCalls(hModule);
+		DisableThreadLibraryCalls(moduleHandle);
 
 		{
 			if (!extender()) {
@@ -52,34 +57,47 @@ extern "C" BOOL APIENTRY DllMain(HMODULE hModule, DWORD fdwReason, LPVOID lpRese
 	return TRUE;
 }
 
-inline DWORD createExtendedCodeAddress(HMODULE moduleHandle, DWORD address) {
-	return (DWORD)moduleHandle + address;
+inline EXTENDED_CODE_ADDRESS createExtendedCodeAddress(HMODULE moduleHandle, RELATIVE_VIRTUAL_ADDRESS relativeVirtualAddress) {
+	return (VIRTUAL_ADDRESS)moduleHandle + relativeVirtualAddress;
 }
 
-bool getSectionAddressAndSize(LPCTSTR errorLpCaption, HMODULE moduleHandle, DWORD virtualAddress, DWORD virtualSize) {
+bool testSectionAddress(LPCTSTR errorLpCaption, HMODULE moduleHandle, VIRTUAL_ADDRESS virtualAddress, VIRTUAL_SIZE virtualSize) {
 	if (!moduleHandle) {
-		MessageBox(NULL, "Failed to Get Module Handle", errorLpCaption, MB_OK | MB_ICONERROR);
+		if (!errorLpCaption) {
+			return false;
+		}
+
+		MessageBox(NULL, "moduleHandle cannot be NULL", errorLpCaption, MB_OK | MB_ICONERROR);
 		return false;
 	}
 
-	PIMAGE_NT_HEADERS imageNtHeader = ImageNtHeader(moduleHandle);
+	PIMAGE_NT_HEADERS imageNTHeader = ImageNtHeader(moduleHandle);
 
-	if (!imageNtHeader) {
+	if (!imageNTHeader) {
+		if (!errorLpCaption) {
+			return false;
+		}
+
 		MessageBox(NULL, "Failed to Get Image NT Header", errorLpCaption, MB_OK | MB_ICONERROR);
 		return false;
 	}
 
-	PIMAGE_SECTION_HEADER imageSectionHeader = (PIMAGE_SECTION_HEADER)(imageNtHeader + 1);
+	PIMAGE_SECTION_HEADER imageSectionHeader = (PIMAGE_SECTION_HEADER)(imageNTHeader + 1);
 
 	if (!imageSectionHeader) {
-		imageNtHeader = NULL;
+		imageNTHeader = NULL;
+		
+		if (!errorLpCaption) {
+			return false;
+		}
+
 		MessageBox(NULL, "Failed to Get Image Section Header", errorLpCaption, MB_OK | MB_ICONERROR);
 		return false;
 	}
 
-	for (WORD i = 0;i < imageNtHeader->FileHeader.NumberOfSections;i++) {
-		if (virtualAddress >= (DWORD)moduleHandle + imageSectionHeader->VirtualAddress && virtualAddress + virtualSize <= (DWORD)moduleHandle + imageSectionHeader->VirtualAddress + imageSectionHeader->Misc.VirtualSize) {
-			imageNtHeader = NULL;
+	for (WORD i = 0;i < imageNTHeader->FileHeader.NumberOfSections;i++) {
+		if (virtualAddress >= (VIRTUAL_ADDRESS)moduleHandle + imageSectionHeader->VirtualAddress && virtualAddress + virtualSize <= (VIRTUAL_ADDRESS)moduleHandle + imageSectionHeader->VirtualAddress + imageSectionHeader->Misc.VirtualSize) {
+			imageNTHeader = NULL;
 			imageSectionHeader = NULL;
 			return true;
 		}
@@ -87,18 +105,36 @@ bool getSectionAddressAndSize(LPCTSTR errorLpCaption, HMODULE moduleHandle, DWOR
 		imageSectionHeader++;
 	}
 
-	imageNtHeader = NULL;
+	imageNTHeader = NULL;
 	imageSectionHeader = NULL;
-	MessageBox(NULL, "Failed to Get Section Address And Size", errorLpCaption, MB_OK | MB_ICONERROR);
-	return false;
-}
 
-bool unprotectCode(LPCTSTR errorLpCaption, HMODULE moduleHandle, DWORD virtualAddress, DWORD virtualSize, DWORD &lpflOldProtect) {
-	if (!getSectionAddressAndSize(errorLpCaption, moduleHandle, virtualAddress, virtualSize)) {
+	if (!errorLpCaption) {
 		return false;
 	}
 
-	if (!VirtualProtect((LPVOID)virtualAddress, virtualSize, PAGE_EXECUTE_READWRITE, &lpflOldProtect) || !virtualAddress || !virtualSize) {
+	MessageBox(NULL, "Failed to Test Address", errorLpCaption, MB_OK | MB_ICONERROR);
+	return false;
+}
+
+bool unprotectCode(LPCTSTR errorLpCaption, HMODULE moduleHandle, VIRTUAL_ADDRESS virtualAddress, VIRTUAL_SIZE virtualSize, DWORD &oldProtect) {
+	if (!moduleHandle) {
+		if (!errorLpCaption) {
+			return false;
+		}
+
+		MessageBox(NULL, "moduleHandle cannot be NULL", errorLpCaption, MB_OK | MB_ICONERROR);
+		return false;
+	}
+
+	if (!testSectionAddress(errorLpCaption, moduleHandle, virtualAddress, virtualSize)) {
+		return false;
+	}
+
+	if (!virtualAddress || !virtualSize || !VirtualProtect((LPVOID)virtualAddress, virtualSize, PAGE_EXECUTE_READWRITE, &oldProtect)) {
+		if (!errorLpCaption) {
+			return false;
+		}
+
 		MessageBox(NULL, "Failed to Unprotect Code", errorLpCaption, MB_OK | MB_ICONERROR);
 		return false;
 	}
@@ -114,91 +150,112 @@ bool unprotectCode(LPCTSTR errorLpCaption, HMODULE moduleHandle, DWORD virtualAd
 	return true;
 }
 
-bool protectCode(LPCTSTR errorLpCaption, HMODULE moduleHandle, DWORD virtualAddress, DWORD virtualSize, DWORD &lpflOldProtect) {
-	if (!getSectionAddressAndSize(errorLpCaption, moduleHandle, virtualAddress, virtualSize)) {
+bool protectCode(LPCTSTR errorLpCaption, HMODULE moduleHandle, VIRTUAL_ADDRESS virtualAddress, VIRTUAL_SIZE virtualSize, DWORD &oldProtect) {
+	if (!moduleHandle) {
+		if (!errorLpCaption) {
+			return false;
+		}
+
+		MessageBox(NULL, "moduleHandle cannot be NULL", errorLpCaption, MB_OK | MB_ICONERROR);
 		return false;
 	}
 
-	if (!lpflOldProtect || !VirtualProtect((LPVOID)virtualAddress, virtualSize, lpflOldProtect, &lpflOldProtect)) {
+	if (!testSectionAddress(errorLpCaption, moduleHandle, virtualAddress, virtualSize)) {
+		return false;
+	}
+
+	if (!virtualAddress || !virtualSize || !VirtualProtect((LPVOID)virtualAddress, virtualSize, oldProtect, &oldProtect)) {
+		if (!errorLpCaption) {
+			return false;
+		}
+
 		MessageBox(NULL, "Failed to Protect Code", errorLpCaption, MB_OK | MB_ICONERROR);
 		return false;
 	}
 	return true;
 }
 
-bool flushCode(LPCTSTR errorLpCaption, HMODULE moduleHandle, DWORD virtualAddress, DWORD virtualSize) {
-	if (!getSectionAddressAndSize(errorLpCaption, moduleHandle, virtualAddress, virtualSize)) {
+bool flushCode(LPCTSTR errorLpCaption, HMODULE moduleHandle, VIRTUAL_ADDRESS virtualAddress, VIRTUAL_SIZE virtualSize) {
+	if (!moduleHandle) {
+		if (!errorLpCaption) {
+			return false;
+		}
+
+		MessageBox(NULL, "moduleHandle cannot be NULL", errorLpCaption, MB_OK | MB_ICONERROR);
+		return false;
+	}
+
+	if (!testSectionAddress(errorLpCaption, moduleHandle, virtualAddress, virtualSize)) {
 		return false;
 	}
 
 	if (!FlushInstructionCache(GetCurrentProcess(), (LPCVOID)virtualAddress, virtualSize)) {
+		if (!errorLpCaption) {
+			return false;
+		}
+
 		MessageBox(NULL, "Failed to Flush Code", errorLpCaption, MB_OK | MB_ICONERROR);
 		return false;
 	}
 	return true;
 }
 
-bool testCode(LPCTSTR errorLpCaption, HMODULE moduleHandle, DWORD relativeVirtualAddress, DWORD virtualSize, unsigned char code[]) {
+bool testCode(LPCTSTR errorLpCaption, HMODULE moduleHandle, RELATIVE_VIRTUAL_ADDRESS relativeVirtualAddress, VIRTUAL_SIZE virtualSize, unsigned char code[]) {
 	if (!moduleHandle) {
 		return false;
 	}
 
-	DWORD virtualAddress = (DWORD)moduleHandle + relativeVirtualAddress;
-	DWORD lpflOldProtect = 0;
+	VIRTUAL_ADDRESS virtualAddress = (VIRTUAL_ADDRESS)moduleHandle + relativeVirtualAddress;
+	DWORD oldProtect = 0;
 
-	if (!unprotectCode(errorLpCaption, moduleHandle, virtualAddress, virtualSize, lpflOldProtect)) {
+	if (!unprotectCode(errorLpCaption, moduleHandle, virtualAddress, virtualSize, oldProtect)) {
 		return false;
 	}
 
 	bool result = memoryEqual((const void*)virtualAddress, (const void*)code, virtualSize);
 
-	if (!protectCode(errorLpCaption, moduleHandle, virtualAddress, virtualSize, lpflOldProtect)) {
+	if (!protectCode(errorLpCaption, moduleHandle, virtualAddress, virtualSize, oldProtect)) {
 		return false;
 	}
 	return result;
 }
 
-bool extendCode(LPCTSTR errorLpCaption, HMODULE moduleHandle, DWORD relativeVirtualAddress, void* code, bool call = false) {
+bool extendCode(LPCTSTR errorLpCaption, HMODULE moduleHandle, RELATIVE_VIRTUAL_ADDRESS relativeVirtualAddress, void* code, bool call = false) {
 	if (!moduleHandle) {
 		return false;
 	}
 
-	DWORD virtualAddress = (DWORD)moduleHandle + relativeVirtualAddress;
-	DWORD virtualSize = 5;
-	DWORD lpflOldProtect = 0;
+	VIRTUAL_ADDRESS virtualAddress = (VIRTUAL_ADDRESS)moduleHandle + relativeVirtualAddress;
+	VIRTUAL_SIZE virtualSize = 5;
+	DWORD oldProtect = 0;
 
-	if (!unprotectCode(errorLpCaption, moduleHandle, virtualAddress, virtualSize, lpflOldProtect)) {
+	if (!unprotectCode(errorLpCaption, moduleHandle, virtualAddress, virtualSize, oldProtect)) {
 		return false;
 	}
 
-	if (!call) {
-		*(PBYTE)virtualAddress = 0xE9;
-	} else {
-		*(PBYTE)virtualAddress = 0x58;
-	}
-
-	*(PDWORD)((PBYTE)virtualAddress + 1) = (DWORD)code - virtualAddress - virtualSize;
+	*(PBYTE)virtualAddress = 0xE9 - call;
+	*(VIRTUAL_ADDRESS*)((PBYTE)virtualAddress + 1) = (VIRTUAL_ADDRESS)code - virtualAddress - virtualSize;
 
 	if (!flushCode(errorLpCaption, moduleHandle, virtualAddress, virtualSize)) {
 		return false;
 	}
 
-	if (!protectCode(errorLpCaption, moduleHandle, virtualAddress, virtualSize, lpflOldProtect)) {
+	if (!protectCode(errorLpCaption, moduleHandle, virtualAddress, virtualSize, oldProtect)) {
 		return false;
 	}
 	return true;
 }
 
-bool extendCode(LPCTSTR errorLpCaption, HMODULE moduleHandle, DWORD relativeVirtualAddress) {
+bool extendCode(LPCTSTR errorLpCaption, HMODULE moduleHandle, RELATIVE_VIRTUAL_ADDRESS relativeVirtualAddress) {
 	if (!moduleHandle) {
 		return false;
 	}
 
-	DWORD virtualAddress = (DWORD)moduleHandle + relativeVirtualAddress;
-	DWORD virtualSize = 1;
-	DWORD lpflOldProtect = 0;
+	VIRTUAL_ADDRESS virtualAddress = (VIRTUAL_ADDRESS)moduleHandle + relativeVirtualAddress;
+	VIRTUAL_SIZE virtualSize = 1;
+	DWORD oldProtect = 0;
 
-	if (!unprotectCode(errorLpCaption, moduleHandle, virtualAddress, virtualSize, lpflOldProtect)) {
+	if (!unprotectCode(errorLpCaption, moduleHandle, virtualAddress, virtualSize, oldProtect)) {
 		return false;
 	}
 
@@ -208,7 +265,7 @@ bool extendCode(LPCTSTR errorLpCaption, HMODULE moduleHandle, DWORD relativeVirt
 		return false;
 	}
 
-	if (!protectCode(errorLpCaption, moduleHandle, virtualAddress, virtualSize, lpflOldProtect)) {
+	if (!protectCode(errorLpCaption, moduleHandle, virtualAddress, virtualSize, oldProtect)) {
 		return false;
 	}
 	return true;

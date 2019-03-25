@@ -1,7 +1,7 @@
 #include <windows.h>
 #include "main.h"
 
-DWORD extendedCode_returnAddress = 0x00000000;
+EXTENDED_CODE_ADDRESS extendedCode_returnAddress = 0x00000000;
 __declspec(naked) void extendedCode() {
 	__asm {
 		// set this to your Extension Code
