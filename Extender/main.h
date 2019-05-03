@@ -96,7 +96,7 @@ bool testSectionAddress(LPCTSTR errorLpCaption, HMODULE moduleHandle, VIRTUAL_AD
 	}
 
 	for (WORD i = 0;i < imageNTHeader->FileHeader.NumberOfSections;i++) {
-		if (virtualAddress >= (VIRTUAL_ADDRESS)moduleHandle + imageSectionHeader->VirtualAddress && virtualAddress + virtualSize <= (VIRTUAL_ADDRESS)moduleHandle + imageSectionHeader->VirtualAddress + imageSectionHeader->Misc.VirtualSize) {
+		if (virtualAddress >= (VIRTUAL_ADDRESS)moduleHandle + imageSectionHeader->VirtualAddress && virtualAddress + virtualSize < (VIRTUAL_ADDRESS)moduleHandle + imageSectionHeader->VirtualAddress + imageSectionHeader->Misc.VirtualSize) {
 			imageNTHeader = NULL;
 			imageSectionHeader = NULL;
 			return true;
