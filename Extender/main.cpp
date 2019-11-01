@@ -2,6 +2,7 @@
 #include "main.h"
 
 EXTENDED_CODE_ADDRESS extendedCode_returnAddress = 0x00000000;
+
 __declspec(naked) void extendedCode() {
 	__asm {
 		// set this to your Extension Code
@@ -13,13 +14,13 @@ __declspec(naked) void extendedCode() {
 
 bool extender() {
 	// set this to your Error Caption
-	LPCTSTR errorLpCaption = "Extender Error";
+	LPCTSTR errorCaption = "Extender Error";
 
 	// get Module Handle
 	HMODULE moduleHandle = GetModuleHandle(NULL);
 
 	if (!moduleHandle) {
-		MessageBox(NULL, "Failed to get Module Handle", errorLpCaption, MB_OK | MB_ICONERROR);
+		MessageBox(NULL, "Failed to get Module Handle", errorCaption, MB_OK | MB_ICONERROR);
 		return false;
 	}
 
@@ -30,14 +31,15 @@ bool extender() {
 	// test it
 	const size_t EXAMPLE_TEST_CODE_SIZE = 4;
 	unsigned char exampleTestCode[EXAMPLE_TEST_CODE_SIZE] = {0x00, 0x00, 0x00, 0x00};
-	if (!testCode(errorLpCaption, moduleHandle, 0x00001000, EXAMPLE_TEST_CODE_SIZE, exampleTestCode)) {
-		MessageBox(NULL, "Failed to Test Code", errorLpCaption, MB_OK | MB_ICONERROR);
+
+	if (!testCode(errorCaption, moduleHandle, 0x00001000, EXAMPLE_TEST_CODE_SIZE, exampleTestCode)) {
+		MessageBox(NULL, "Failed to Test Code", errorCaption, MB_OK | MB_ICONERROR);
 		return false;
 	}
 
 	// extend it
-	if (!extendCode(errorLpCaption, moduleHandle, 0x00001000, extendedCode)) {
-		MessageBox(NULL, "Failed to Extend Code", errorLpCaption, MB_OK | MB_ICONERROR);
+	if (!extendCode(errorCaption, moduleHandle, 0x00001000, extendedCode)) {
+		MessageBox(NULL, "Failed to Extend Code", errorCaption, MB_OK | MB_ICONERROR);
 		return false;
 	}
 	return true;
