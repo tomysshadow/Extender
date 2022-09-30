@@ -43,13 +43,13 @@ bool shiftMemory(size_t bufferSize, void* buffer, size_t sourceSize, void* sourc
 
 bool extender();
 
-extern "C" BOOL APIENTRY DllMain(HMODULE moduleHandle, DWORD fdwReason, LPVOID lpReserved) {
-	if (fdwReason == DLL_PROCESS_ATTACH) {
-		DisableThreadLibraryCalls(moduleHandle);
+extern "C" BOOL WINAPI DllMain(HINSTANCE instance, DWORD reason, LPVOID reserved) {
+	if (reason == DLL_PROCESS_ATTACH) {
+		DisableThreadLibraryCalls(instance);
 
 		{
 			if (!extender()) {
-				TerminateProcess(GetCurrentProcess(), -1);
+				TerminateProcess(GetCurrentProcess(), GetLastError());
 				return FALSE;
 			}
 		}
