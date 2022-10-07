@@ -1,9 +1,10 @@
+#include "shared.h"
+#include "Extender.h"
 #include <windows.h>
-#include "main.h"
 
 EXTENDED_CODE_ADDRESS extendedCode_returnAddress = 0x00000000;
 
-__declspec(naked) void extendedCode() {
+__declspec(naked) void exampleExtendedCode() {
 	__asm {
 		// set this to your Extension Code
 		
@@ -13,34 +14,47 @@ __declspec(naked) void extendedCode() {
 }
 
 bool extender() {
-	// set this to your Error Caption
-	LPCTSTR errorCaption = "Extender Error";
-
-	// get Module Handle
 	HMODULE moduleHandle = GetModuleHandle(NULL);
 
 	if (!moduleHandle) {
-		MessageBox(NULL, "Failed to get Module Handle", errorCaption, MB_OK | MB_ICONERROR);
+		showLastError("Failed to Get Module Handle");
+		terminateCurrentProcess();
 		return false;
 	}
 
-	// add your Extension Code Addresses
-	// (any addresses you want to use within your Extension Code as a variable)
-	extendedCode_returnAddress = createExtendedCodeAddress(moduleHandle, 0x00001000);
+	// add your Extended Code Addresses
+	// (any addresses you want to use within your Extended Code as a variable)
+	extendedCode_returnAddress = makeExtendedCodeAddress(moduleHandle, 0x00001000);
 
 	// test it
-	const size_t EXAMPLE_TEST_CODE_SIZE = 4;
-	unsigned char exampleTestCode[EXAMPLE_TEST_CODE_SIZE] = {0x00, 0x00, 0x00, 0x00};
+	const VIRTUAL_SIZE EXAMPLE_TESTED_CODE_SIZE = 4;
+	CODE1 exampleTestedCode[EXAMPLE_TESTED_CODE_SIZE] = {0x00, 0x00, 0x00, 0x00};
 
-	if (!testCode(errorCaption, moduleHandle, 0x00001000, EXAMPLE_TEST_CODE_SIZE, exampleTestCode)) {
-		MessageBox(NULL, "Failed to Test Code", errorCaption, MB_OK | MB_ICONERROR);
+	if (!testCode(moduleHandle, 0x00001000, EXAMPLE_TESTED_CODE_SIZE, exampleTestedCode)) {
+		showLastError("Failed to Test Code");
+		terminateCurrentProcess();
 		return false;
 	}
 
 	// extend it
-	if (!extendCode(errorCaption, moduleHandle, 0x00001000, extendedCode)) {
-		MessageBox(NULL, "Failed to Extend Code", errorCaption, MB_OK | MB_ICONERROR);
+	if (!extendCode(moduleHandle, 0x00001000, exampleExtendedCode)) {
+		showLastError("Failed to Extend Code");
+		terminateCurrentProcess();
 		return false;
 	}
 	return true;
+}
+
+extern "C" BOOL WINAPI DllMain(HINSTANCE instance, DWORD reason, LPVOID reserved) {
+	if (reason == DLL_PROCESS_ATTACH) {
+		if (!DisableThreadLibraryCalls(instance)) {
+			showLastError("Failed to Disable Thread Library Calls");
+			return FALSE;
+		}
+
+		if (!extender()) {
+			return FALSE;
+		}
+	}
+	return TRUE;
 }
