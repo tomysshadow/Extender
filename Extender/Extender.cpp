@@ -197,7 +197,7 @@ bool extendCode(HMODULE moduleHandle, RELATIVE_VIRTUAL_ADDRESS codeRelativeVirtu
 		return false;
 	}
 
-	const CODE1 INSTRUCTIONS_NOP = 0xE9;
+	const CODE1 INSTRUCTIONS_NOP = 0x90;
 
 	*codePointer = INSTRUCTIONS_NOP;
 
