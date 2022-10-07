@@ -18,7 +18,6 @@ bool extender() {
 
 	if (!moduleHandle) {
 		showLastError("Failed to Get Module Handle");
-		terminateCurrentProcess();
 		return false;
 	}
 
@@ -32,14 +31,12 @@ bool extender() {
 
 	if (!testCode(moduleHandle, 0x00001000, EXAMPLE_TESTED_CODE_SIZE, exampleTestedCode)) {
 		showLastError("Failed to Test Code");
-		terminateCurrentProcess();
 		return false;
 	}
 
 	// extend it
 	if (!extendCode(moduleHandle, 0x00001000, exampleExtendedCode)) {
 		showLastError("Failed to Extend Code");
-		terminateCurrentProcess();
 		return false;
 	}
 	return true;
@@ -53,6 +50,7 @@ extern "C" BOOL WINAPI DllMain(HINSTANCE instance, DWORD reason, LPVOID reserved
 		}
 
 		if (!extender()) {
+			terminateCurrentProcess();
 			return FALSE;
 		}
 	}
