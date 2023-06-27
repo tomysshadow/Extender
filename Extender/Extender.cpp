@@ -125,7 +125,6 @@ bool extendCode(HMODULE moduleHandle, RELATIVE_VIRTUAL_ADDRESS codeRelativeVirtu
 
 	*(VIRTUAL_ADDRESS*)(codePointer + 1) = (VIRTUAL_ADDRESS)extendedCode - codeVirtualAddress - CODE_VIRTUAL_SIZE;
 	*codePointer = call ? INSTRUCTIONS_CALL : INSTRUCTIONS_JMP;
-	codePointer = NULL;
 
 	if (!protectCode(moduleHandle, codeVirtualAddress, CODE_VIRTUAL_SIZE, oldProtect)) {
 		showLastError("Failed to Protect Code");
