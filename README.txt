@@ -1,4 +1,4 @@
-Extender 1.5.5
+Extender 1.5.6
 By Anthony Kleine
 
 This is a template to extend the code of any module. It is loosely based on PlatinumTeam's MB Extender, but is much more lightweight.
